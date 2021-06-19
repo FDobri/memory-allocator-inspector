@@ -56,4 +56,43 @@ private:
     std::uint64_t id_{};
 };
 
+class Arena {
+public:
+    explicit Arena(std::size_t capacity, std::size_t history = 0)
+        : data_(new std::byte[capacity]), capacity_(capacity), journal_(history),
+          trace_(history != 0) {}
+    Arena(const Arena&) = delete;
+    Arena& operator=(const Arena&) = delete;
+
+    Block allocate(std::size_t bytes, std::size_t alignment) {
+        if (!bytes || !std::has_single_bit(alignment))
+            throw std::invalid_argument("size and alignment must be positive; alignment must be a power of two");
+        void* pointer = data_.get() + used_;
+        auto remaining = capacity_ - used_;
+        if (!std::align(alignment, bytes, pointer, remaining)) throw std::bad_alloc();
+        auto offset = static_cast<std::size_t>(static_cast<std::byte*>(pointer) - data_.get());
+        auto id = journal_.next_id();
+        if (trace_) live_.push_back({id, offset, bytes, offset + bytes, {}, true});
+        used_ = offset + bytes;
+        journal_.add(id, offset, bytes, used_, true);
+        return {pointer, id};
+    }
+    void reset() noexcept {
+        for (auto it = live_.rbegin(); it != live_.rend(); ++it) {
+            const auto next = it + 1;
+            journal_.add(it->id, it->offset, it->bytes, next == live_.rend() ? 0 : next->used, false);
+        }
+        live_.clear();
+        used_ = 0;
+    }
+    std::size_t used() const noexcept { return used_; }
+    const Journal& journal() const noexcept { return journal_; }
+private:
+    std::unique_ptr<std::byte[]> data_;
+    std::size_t capacity_, used_{};
+    Journal journal_;
+    bool trace_;
+    std::vector<Event> live_;
+};
+
 }
