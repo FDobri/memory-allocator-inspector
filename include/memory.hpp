@@ -95,4 +95,58 @@ private:
     std::vector<Event> live_;
 };
 
+class Pool {
+public:
+    Pool(std::size_t bytes, std::size_t count, std::size_t alignment, std::size_t history = 0)
+        : stride_(stride(bytes, alignment)), alignment_(std::max(alignment, alignof(std::max_align_t))),
+          ids_(checked_count(count, stride_)), journal_(history) {
+        free_.reserve(count);
+        for (auto i = count; i > 0; --i) free_.push_back(i - 1);
+        data_ = static_cast<std::byte*>(::operator new(stride_ * count, std::align_val_t(alignment_)));
+    }
+    ~Pool() { ::operator delete(data_, std::align_val_t(alignment_)); }
+    Pool(const Pool&) = delete;
+    Pool& operator=(const Pool&) = delete;
+
+    Block allocate() {
+        if (free_.empty()) throw std::bad_alloc();
+        auto index = free_.back();
+        auto id = journal_.next_id();
+        free_.pop_back();
+        ids_[index] = id;
+        journal_.add(id, index * stride_, stride_, used(), true);
+        return {data_ + index * stride_, id};
+    }
+    void release(Block block) {
+        auto address = reinterpret_cast<std::uintptr_t>(block.data);
+        auto base = reinterpret_cast<std::uintptr_t>(data_);
+        if (address < base) throw std::invalid_argument("foreign block");
+        auto offset = address - base;
+        auto index = offset / stride_;
+        if (offset % stride_ || index >= ids_.size() || !block.id || ids_[index] != block.id)
+            throw std::invalid_argument("foreign or stale block");
+        ids_[index] = 0;
+        free_.push_back(index);
+        journal_.add(block.id, offset, stride_, used(), false);
+    }
+    std::size_t used() const noexcept { return (ids_.size() - free_.size()) * stride_; }
+    const Journal& journal() const noexcept { return journal_; }
+private:
+    static std::size_t stride(std::size_t bytes, std::size_t alignment) {
+        if (!bytes || !std::has_single_bit(alignment) ||
+            bytes > std::numeric_limits<std::size_t>::max() - (alignment - 1))
+            throw std::invalid_argument("invalid slot size or alignment");
+        return (bytes + alignment - 1) & ~(alignment - 1);
+    }
+    static std::size_t checked_count(std::size_t count, std::size_t stride) {
+        if (!count || count > std::numeric_limits<std::size_t>::max() / stride)
+            throw std::invalid_argument("invalid slot count");
+        return count;
+    }
+    std::size_t stride_, alignment_;
+    std::vector<std::uint64_t> ids_;
+    std::vector<std::size_t> free_;
+    Journal journal_;
+    std::byte* data_{};
+};
 }
