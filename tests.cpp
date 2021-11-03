@@ -16,3 +16,21 @@ TEST(Arena, AlignsAndResets) {
     EXPECT_EQ(events[2].id, block.id);
     EXPECT_EQ(events.back().used, 0u);
 }
+
+TEST(Pool, RejectsStaleAndReusesSlots) {
+    memory::Pool pool(23, 1, 64, 2);
+    const auto first = pool.allocate();
+    EXPECT_EQ(reinterpret_cast<std::uintptr_t>(first.data) % 64, 0u);
+    EXPECT_THROW(pool.allocate(), std::bad_alloc);
+    pool.release(first);
+    EXPECT_THROW(pool.release(first), std::invalid_argument);
+    const auto next = pool.allocate();
+    EXPECT_EQ(first.data, next.data);
+    EXPECT_NE(first.id, next.id);
+    EXPECT_THROW(pool.release(first), std::invalid_argument);
+    pool.release(next);
+    const auto events = pool.journal().events();
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_TRUE(events.front().allocated);
+    EXPECT_FALSE(events.back().allocated);
+}
