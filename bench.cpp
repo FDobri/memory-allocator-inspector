@@ -16,5 +16,15 @@ void heap(benchmark::State& state) {
     }
     state.SetItemsProcessed(state.iterations() * batch);
 }
+void arena(benchmark::State& state) {
+    memory::Arena arena(bytes * (batch + 1));
+    for (auto iteration : state) {
+        for (std::size_t i = 0; i < batch; ++i)
+            benchmark::DoNotOptimize(arena.allocate(bytes, bytes).data);
+        arena.reset();
+    }
+    state.SetItemsProcessed(state.iterations() * batch);
+}
 }
 BENCHMARK(heap);
+BENCHMARK(arena);
