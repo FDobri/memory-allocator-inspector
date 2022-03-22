@@ -25,6 +25,19 @@ void arena(benchmark::State& state) {
     }
     state.SetItemsProcessed(state.iterations() * batch);
 }
+void pool(benchmark::State& state) {
+    memory::Pool pool(bytes, batch, bytes);
+    std::array<memory::Block, batch> blocks{};
+    for (auto iteration : state) {
+        for (auto& block : blocks) {
+            block = pool.allocate();
+            benchmark::DoNotOptimize(block.data);
+        }
+        for (auto block : blocks) pool.release(block);
+    }
+    state.SetItemsProcessed(state.iterations() * batch);
+}
 }
 BENCHMARK(heap);
 BENCHMARK(arena);
+BENCHMARK(pool);
