@@ -29,4 +29,11 @@ if(INSPECTOR_GUI)
     FetchContent_Declare(SDL3 URL https://codeload.github.com/libsdl-org/SDL/tar.gz/refs/tags/release-3.2.10)
     FetchContent_Declare(imgui URL https://codeload.github.com/ocornut/imgui/tar.gz/refs/tags/v1.91.9b)
     FetchContent_MakeAvailable(SDL3 imgui)
+    add_executable(inspector demo.cpp
+        ${imgui_SOURCE_DIR}/imgui.cpp ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
+    target_include_directories(inspector PRIVATE ${imgui_SOURCE_DIR})
+    target_link_libraries(inspector PRIVATE memory SDL3::SDL3)
 endif()
