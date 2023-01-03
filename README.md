@@ -1,3 +1,3 @@
 # Memory Allocator and Inspector
 
-An arena and a fixed-size pool with a usage inspector.
+A C++20 bump arena and fixed-size free-list pool with an interactive Dear ImGui inspector for usage and allocation lifetimes.
