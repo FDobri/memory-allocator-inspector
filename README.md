@@ -13,3 +13,7 @@ ctest --test-dir build -C Release --output-on-failure
 ./build/inspector
 ./build/memory_bench --benchmark_repetitions=5
 ```
+
+With a multi-config generator, look in `build/Release/`. In the inspector, allocate a few arena blocks with different alignment settings and reset the arena. Switch to the pool, allocate slots, then release the oldest slot. The table shows elapsed lifetimes while the matching allocation event remains in history.
+
+## Design and reproducibility
