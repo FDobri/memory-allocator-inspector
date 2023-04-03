@@ -17,3 +17,5 @@ ctest --test-dir build -C Release --output-on-failure
 With a multi-config generator, look in `build/Release/`. In the inspector, allocate a few arena blocks with different alignment settings and reset the arena. Switch to the pool, allocate slots, then release the oldest slot. The table shows elapsed lifetimes while the matching allocation event remains in history.
 
 ## Design and reproducibility
+
+The arena uses `std::align` and retains storage across resets. The pool uses aligned, fixed-stride slots and checks allocation IDs to reject stale or duplicate releases. Both allocators are single-threaded. The demo records the latest 256 events per allocator in a ring. Callers own any object construction and destruction in the returned raw storage.
