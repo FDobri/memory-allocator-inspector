@@ -19,3 +19,7 @@ With a multi-config generator, look in `build/Release/`. In the inspector, alloc
 ## Design and reproducibility
 
 The arena uses `std::align` and retains storage across resets. The pool uses aligned, fixed-stride slots and checks allocation IDs to reject stale or duplicate releases. Both allocators are single-threaded. The demo records the latest 256 events per allocator in a ring. Callers own any object construction and destruction in the returned raw storage.
+
+The benchmark reserves external state before the timed loop. Each iteration allocates and releases a batch of 1,024 aligned 64-byte blocks. Arena reset releases the batch as a unit. Google Benchmark reports time per batch and throughput. Record CPU, OS, compiler, build configuration and repetition settings when sharing results.
+
+For sanitizer validation, configure a separate build with `-DINSPECTOR_ASAN=ON -DINSPECTOR_GUI=OFF -DINSPECTOR_BENCH=OFF`, then build and run CTest using RelWithDebInfo. On MSVC, run from a Visual Studio Developer PowerShell so the ASan runtime is on PATH. ASan covers accesses to the backing allocation. Pool release validation uses allocation IDs.
