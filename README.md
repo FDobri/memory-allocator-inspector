@@ -33,3 +33,5 @@ Ryzen 7 3700X (8 cores, 16 threads), Windows 10 22H2, MSVC 19.44 x64 Release, Go
 | Aligned heap | 89.871 µs |
 | Arena | 7.711 µs |
 | Pool | 16.062 µs |
+
+The Release test suite and the RelWithDebInfo AddressSanitizer build both passed.
